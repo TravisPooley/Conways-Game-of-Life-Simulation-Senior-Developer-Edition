@@ -417,7 +417,7 @@ if (CHANGE_UI) {
     );
     link.innerText = "Learn how this was made";
     // make it rick roll
-    link.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    link.href = "https://github.com/TravisPooley/Conways-Game-of-Life-Simulation-Senior-Developer-Edition";
 } else {
     clearBoard();
     randomBoard(40);
