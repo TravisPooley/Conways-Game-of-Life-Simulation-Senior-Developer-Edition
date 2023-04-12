@@ -7,22 +7,14 @@ const WEEK_IN_MS = 7 * DAY_IN_MS;
 
 // Define an array of offsets for each of the neighboring cells relative to the current cell
 const NEIGHBORS = [
-    // top left - (-1 week - 1 day)
-    -WEEK_IN_MS - DAY_IN_MS,
-    // top - (1 day)
-    -DAY_IN_MS,
-    // top right - (-1 week + 1 day)
-    -WEEK_IN_MS + DAY_IN_MS,
-    // left - (-1 week)
-    -WEEK_IN_MS,
-    // right - (1 week)
-    WEEK_IN_MS,
-    // bottom left - (1 week - 1 day)
-    WEEK_IN_MS - DAY_IN_MS,
-    // bottom - (1 day)
-    DAY_IN_MS,
-    // bottom right - (1 week + 1 day)
-    WEEK_IN_MS + DAY_IN_MS,
+    -WEEK_IN_MS - DAY_IN_MS, // top left - (-1 week - 1 day)
+    -DAY_IN_MS, // top - (1 day)
+    -WEEK_IN_MS + DAY_IN_MS, // top right - (-1 week + 1 day)
+    -WEEK_IN_MS, // left - (-1 week)
+    WEEK_IN_MS, // right - (1 week)
+    WEEK_IN_MS - DAY_IN_MS, // bottom left - (1 week - 1 day)
+    DAY_IN_MS, // bottom - (1 day)
+    WEEK_IN_MS + DAY_IN_MS, // bottom right - (1 week + 1 day)
 ];
 
 // Define the colors that can be used for the cells.
@@ -39,6 +31,8 @@ const BACKGROUND_COLOR_OFF = "#161b22";
 
 // initial state of the game
 let started = false;
+// fill amount for the random generation
+let fillAmount = 50;
 // the timer for the game
 let timer;
 
@@ -248,9 +242,9 @@ function renderNextGeneration() {
 
 /**
  * Sets the board to a random state.
- * @param {number} percentage The percentage of cells that should be on (default is 50).
+ * @param {number} percentage The percentage of cells that should be on (default is the fillAmount).
  */
-function randomBoard(percentage = 50) {
+function randomBoard(percentage = fillAmount) {
     // Select all cells on the board.
     let cells = getAllCells();
 
@@ -264,6 +258,76 @@ function randomBoard(percentage = 50) {
         
         // Set the cell's background color to the generated color.
         cell.style.backgroundColor = backgroundColor;
+    });
+}
+
+/**
+ * Increases the fill percentage by 10.
+ */
+function increaseFill() {
+    // max fill is 100
+    if (fillAmount == 100) return;
+
+    // increase fill by 10
+    fillAmount += 5;
+
+    // update the the fill display to reflect the new fill percentage
+    updateFillDisplay();
+}
+
+/**
+ * Decreases the fill percentage by 10.
+ */
+function decreaseFill() {
+    // min fill is 0
+    if (fillAmount == 0) return;
+
+    // decrease fill by 10
+    fillAmount -= 5;
+
+    // update the the fill display to reflect the new fill percentage
+    updateFillDisplay();
+}
+
+/**
+ * Function to update the fill display of the contribution graph based on fillAmount
+ * The fill graph is made up of 5 SVGs, each representing 20% of the fill amount the following function changes the intensity of the color of each SVG based on the fill amount.
+ */
+function updateFillDisplay() {
+
+    // Select all the SVGs within the specified DOM element
+    const svgs = document.querySelectorAll('.float-right.color-fg-muted rect');
+  
+    // Set the default color to the background color of the SVGs
+    let color = "var(--color-calendar-graph-day-bg)";
+  
+    // Loop through each SVG and update the color based on the fillAmount
+    svgs.forEach((svg, i) => {
+        switch (true) {
+            // 100%
+            case fillAmount >= (20 + (i * 20)):
+                color = "var(--color-calendar-graph-day-L4-bg)";
+                break;
+            // 75%
+            case fillAmount >= (15 + (i * 20)):
+                color = "var(--color-calendar-graph-day-L3-bg)";
+                break;
+            // 50%
+            case fillAmount >= (10 + (i * 20)):
+                color = "var(--color-calendar-graph-day-L2-bg)";
+                break;
+            // 25%
+            case fillAmount >= (5 + (i * 20)):
+                color = "var(--color-calendar-graph-day-L1-bg)";
+                break;
+            // 0%
+            default:
+                color = "var(--color-calendar-graph-day-bg)";
+        }
+  
+      // Update the fill color and background color of the SVG with the calculated color
+      svg.style.fill = color;
+      svg.style.backgroundColor = color;
     });
 }
 
@@ -359,23 +423,32 @@ function stopGame() {
  */
 function setPattern(pattern, color) {
     pattern.forEach((date) => {
-       // Get the cell that corresponds to the date
-       let cell = getCell(date);
-       // Set the background color of the cell to the specified value
-       cell.style.backgroundColor = color;
+        // Get the cell that corresponds to the date
+        let cell = getCell(date);
+
+        if (!cell) {
+            console.warn(`Cell for date ${date} not found`);
+            return;
+        }
+
+        // Set the background color of the cell to the specified value
+        cell.style.backgroundColor = color;
     });
 }
 
 
 if (CHANGE_UI) {
+
+    // get the div element that contains the buttons
     const divElement = document.querySelector(
         "div.width-full.f6.px-0.px-md-5.py-1"
     );
 
-    // change from px-md-5 to px-md-3
+    // change from px-md-5 to px-md-3 gives the ui more space while still aligning with the calendar
     divElement.classList.remove("px-md-5");
     divElement.classList.add("px-md-3");
 
+    // new UI buttons
     const BUTTONS = [
         {
             "text": "Play",
@@ -391,33 +464,57 @@ if (CHANGE_UI) {
             "text": "Random",
             "id": "random-board",
             "onclick": () => {
-                randomBoard(40);
+                randomBoard();
             }
         },
     ]
 
     for (let i = 0; i < BUTTONS.length; i++) {
-        const button = BUTTONS[i];
-        const anchorElement = document.createElement("a");
-        anchorElement.textContent = button.text;
-        // add the id of game-status
-        anchorElement.id = button.id;
-        // make the cursor a pointer
-        anchorElement.style.cursor = "pointer";
-        // add a margin left and right of 10px
-        anchorElement.style.margin = "0 10px";
-        // make it when you click on it, it will start the game
-        anchorElement.onclick = button.onclick;
-        divElement.insertBefore(anchorElement, divElement.children[i + 1]);
+        const button = BUTTONS[i]; // get the button
+        const anchorElement = document.createElement("a"); // create new anchor element for the button
+        anchorElement.textContent = button.text; // Change the text
+        anchorElement.id = button.id; // give it the corresponding id
+        anchorElement.style.cursor = "pointer"; // Make the cursor a pointer
+        anchorElement.style.margin = "0 10px"; // add margin to the sides
+        anchorElement.onclick = button.onclick; // make it clickable
+        divElement.insertBefore(anchorElement, divElement.children[i + 1]); // insert the button so that it is in the middle
     }
 
 
-    const link = document.querySelector(
-        'a[href="https://docs.github.com/articles/why-are-my-contributions-not-showing-up-on-my-profile"].Link--muted'
-    );
-    link.innerText = "Learn how this was made";
-    // make it rick roll
-    link.href = "https://github.com/TravisPooley/Conways-Game-of-Life-Simulation-Senior-Developer-Edition";
+    const link = document.querySelector('a[href="https://docs.github.com/articles/why-are-my-contributions-not-showing-up-on-my-profile"].Link--muted');
+    link.innerText = "Learn how this was made"; // Change the text
+    link.href = "https://github.com/TravisPooley/Conways-Game-of-Life-Simulation-Senior-Developer-Edition"; // Change the link to the repo
+
+
+    // Get the parent element that contains the text nodes
+    const parentEl = document.querySelector('.float-right.color-fg-muted');
+
+    // Create a new span element for "Less"
+    const lessSpan = document.createElement('span');
+    lessSpan.textContent = ' Less '; // Set the text content
+    lessSpan.style.cursor = 'pointer'; // Make the cursor a pointer
+    lessSpan.style.userSelect = 'none'; // Prevent the text from being selected
+
+    // Create a new span element for "More"
+    const moreSpan = document.createElement('span');
+    moreSpan.textContent = ' More '; // Set the text content
+    moreSpan.style.cursor = 'pointer'; // Make the cursor a pointer
+    moreSpan.style.userSelect = 'none'; // Prevent the text from being selected
+
+    // Replace the "Less" text node with the new "Less" span element
+    parentEl.replaceChild(lessSpan, parentEl.childNodes[0]);
+
+    // Replace the "More" text node with the new "More" span element
+    parentEl.replaceChild(moreSpan, parentEl.childNodes[parentEl.childNodes.length - 1]);
+
+    // Set the onClick functions for the span elements
+    moreSpan.onclick = increaseFill;
+    lessSpan.onclick = decreaseFill;
+
+    updateFillDisplay();
+
+
+
 } else {
     clearBoard();
     randomBoard(40);
@@ -426,33 +523,3 @@ if (CHANGE_UI) {
 
 
 
-
-
-
-
-
-
-
-
-// // function to make the cell alive when you click on it
-// function makeAlive(cell) {
-//     // get all cells
-//     const cells = getAllCells();
-//     // loop through all cells
-//     for (const cell of cells) {
-//         // remove old event listener from cell
-//         cell.removeEventListener("click", toggleCell);
-//         // add new event listener to cell
-//         cell.addEventListener("click", (cell) => {
-//             // if cell is alive
-//             if (isAlive(cell)) {
-//                 // make cell dead
-//                 cell.style.backgroundColor = "#161b22";
-//             // else
-//             } else {
-//                 // make cell alive
-//                 cell.style.backgroundColor = "#f2f2f2";
-//             }
-//         });
-//     }
-// }
